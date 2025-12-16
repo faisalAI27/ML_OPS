@@ -16,6 +16,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Derive lowercase owner
+        id: owner
+        run: echo "OWNER_LC=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+
       - name: Checkout repository (with LFS)
         uses: actions/checkout@v4
         with:
@@ -40,8 +44,8 @@ jobs:
           file: Dockerfile.api
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/smogguard-api:latest
-            ghcr.io/${{ github.repository_owner }}/smogguard-api:${{ github.event.workflow_run.head_sha }}
+            ghcr.io/${{ env.OWNER_LC }}/smogguard-api:latest
+            ghcr.io/${{ env.OWNER_LC }}/smogguard-api:${{ github.event.workflow_run.head_sha }}
 
       - name: Build and push UI image
         uses: docker/build-push-action@v5
@@ -50,5 +54,5 @@ jobs:
           file: Dockerfile.ui
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/smogguard-ui:latest
-            ghcr.io/${{ github.repository_owner }}/smogguard-ui:${{ github.event.workflow_run.head_sha }}
+            ghcr.io/${{ env.OWNER_LC }}/smogguard-ui:latest
+            ghcr.io/${{ env.OWNER_LC }}/smogguard-ui:${{ github.event.workflow_run.head_sha }}
