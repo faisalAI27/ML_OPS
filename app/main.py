@@ -15,7 +15,7 @@ from fastapi import Body
 
 from app.logging_config import configure_logging
 from app.model_loader import MODELS_DIR, PROD_DIR
-from app.config import CITY_COORDS
+from app.config import CITY_COORDS, OPENWEATHER_API_KEY
 from app.external_clients import fetch_openmeteo_weather, fetch_openweather_pollutants
 from app.inference import clf_pipeline, reg_pipeline
 from app.recommendations import build_recommendations
@@ -83,6 +83,11 @@ def _reset_metrics():
     _successful_requests = 0
     _failed_requests = 0
     _requests_by_city = defaultdict(int)
+
+
+def _using_real_external_clients() -> bool:
+    """Detect if external client functions are patched/mocked (tests) or real (runtime)."""
+    return getattr(fetch_openweather_pollutants, "__module__", "") == "app.external_clients"
 
 
 @app.get("/health")
@@ -154,6 +159,11 @@ def predict_realtime(city: str):
     city_norm = city.strip().lower()
     if city_norm not in CITY_COORDS:
         raise HTTPException(status_code=400, detail="Unsupported city")
+    if not OPENWEATHER_API_KEY and _using_real_external_clients():
+        raise HTTPException(
+            status_code=503,
+            detail="OPENWEATHER_API_KEY is not set; realtime endpoint is unavailable.",
+        )
 
     logger.info(
         "predict_realtime request city=%s, openweather_key=%s, prod_reg_exists=%s, prod_clf_exists=%s",

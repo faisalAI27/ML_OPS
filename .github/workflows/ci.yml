@@ -37,3 +37,24 @@ jobs:
         run: |
           pytest
           python -m src.ml_tests.run_all
+
+  docker-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install git-lfs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git-lfs
+          git lfs install
+
+      - name: Checkout repo (with LFS)
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Build API image for tests
+        run: docker build -f Dockerfile.api -t smogguard-api:ci .
+
+      - name: Run tests in API container
+        run: docker run --rm smogguard-api:ci pytest -q
