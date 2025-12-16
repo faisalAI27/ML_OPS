@@ -1,5 +1,3 @@
-models
-data
 .venv
 __pycache__
 *.pyc
@@ -8,3 +6,4 @@ __pycache__
 .ipynb_checkpoints
 .pytest_cache
 .DS_Store
+# Keep models/data in the build context for tests and runtime

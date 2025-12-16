@@ -56,5 +56,8 @@ jobs:
       - name: Build API image for tests
         run: docker build -f Dockerfile.api -t smogguard-api:ci .
 
+      - name: Debug model files in image
+        run: docker run --rm smogguard-api:ci sh -c "ls -la /app/models && ls -la /app/models/production"
+
       - name: Run tests in API container
         run: docker run --rm smogguard-api:ci pytest -q
