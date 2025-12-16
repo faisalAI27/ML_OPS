@@ -13,6 +13,8 @@ data/processed/
 
 # models & artifacts
 models/
+models/production/
+models/production/*.pkl
 artifacts/
 *.pkl
 *.joblib
