@@ -1,0 +1,7 @@
+name: smogguard-pk
+prefect-version: ">=2.13.0"
+description: Prefect project configuration for SmogGuard PK flows.
+flows:
+  - src.orchestration.flows.build_offline_features_flow
+  - src.orchestration.flows.train_models_flow
+  - src.orchestration.flows.evaluate_on_test_flow
