@@ -28,6 +28,8 @@ from src.models.train_model import (
     prepare_train_val_split,
 )
 from src.notifications import send_webhook
+from src.ml_tests.reference_builder import save_reference_stats
+from src.ml_tests.drift_checks import REFERENCE_PATH
 from src.validation.data_checks import validate_features_targets, validate_raw_data
 from src.validation.model_checks import check_model_predictions
 from sklearn.tree import DecisionTreeClassifier
@@ -222,6 +224,8 @@ def aqi_training_flow():
         validate_raw_task(df)
         X_train, y_reg_train, y_clf_train, X_val, y_reg_val, y_clf_val, feature_cols = build_features_targets(df)
         validate_features_task(X_train, y_reg_train, y_clf_train)
+        # Save reference stats for drift checks
+        save_reference_stats(pd.concat([X_train, X_val]), feature_cols, REFERENCE_PATH)
         models_info = train_models_task(X_train, y_reg_train, y_clf_train, feature_cols)
         check_model_task(models_info["regressor_path"], X_val)
         metrics = evaluate_models_task(models_info, X_val, y_reg_val, y_clf_val)

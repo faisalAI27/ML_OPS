@@ -8,6 +8,7 @@ __pycache__/
 
 # data
 data/
+!data/reference_stats.json
 data/raw/
 data/processed/
 
@@ -22,3 +23,6 @@ artifacts/
 *.pth
 *.h5
 *.onnx
+# allow CI drift sample
+!tests/data/
+!tests/data/current_sample.csv

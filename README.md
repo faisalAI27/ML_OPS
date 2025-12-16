@@ -33,6 +33,7 @@ Historical AQI + Weather --> Prefect Flow (aqi_training_flow)
   - `NOTIFY_WEBHOOK_URL` (optional)
 - Copy `.env.example` → `.env` and fill in your key. Docker Compose reads `OPENWEATHER_API_KEY` from the shell environment.
 - If using Git LFS for models: `git lfs install` then `git lfs pull` to fetch production models.
+- Training writes `data/reference_stats.json` for CI drift checks.
 
 ## How to Run (Local, no Docker)
 ```bash
