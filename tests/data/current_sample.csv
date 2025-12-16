@@ -1,0 +1,4 @@
+city,datetime,main_aqi,components_pm2_5,components_pm10
+islamabad,2024-01-01,3,15,30
+lahore,2024-01-02,4,25,50
+karachi,2024-01-03,2,10,20
