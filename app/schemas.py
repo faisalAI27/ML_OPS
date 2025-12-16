@@ -1,6 +1,7 @@
 """Pydantic request/response schemas for the prediction API."""
 
 from typing import Literal, Optional
+from typing import Dict, Any, List
 
 from pydantic import BaseModel
 
@@ -63,3 +64,18 @@ class AQIPredictionResponse(BaseModel):
     model_version: str = "0.1.0"
     regression_rmse_test: float = 0.46
     classification_accuracy_test: float = 0.90
+
+
+class FeaturesPredictRequest(BaseModel):
+    features: Dict[str, Any]
+    input_type: str = "features_json"
+
+
+class FeaturesPredictResponse(BaseModel):
+    result: Dict[str, Any]
+    input_type: str = "features_json"
+
+
+class FeaturesBatchResponse(BaseModel):
+    results: List[Dict[str, Any]]
+    input_type: str = "features_csv"

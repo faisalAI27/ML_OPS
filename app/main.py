@@ -10,7 +10,8 @@ import os
 from collections import defaultdict
 
 import pandas as pd
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import Body
 
 from app.logging_config import configure_logging
 from app.model_loader import MODELS_DIR, PROD_DIR
@@ -18,7 +19,13 @@ from app.config import CITY_COORDS
 from app.external_clients import fetch_openmeteo_weather, fetch_openweather_pollutants
 from app.inference import clf_pipeline, reg_pipeline
 from app.recommendations import build_recommendations
-from app.schemas import AQIPredictionRequest, AQIPredictionResponse
+from app.schemas import (
+    AQIPredictionRequest,
+    AQIPredictionResponse,
+    FeaturesPredictRequest,
+    FeaturesPredictResponse,
+    FeaturesBatchResponse,
+)
 
 logger = configure_logging().getChild("main")
 
@@ -246,6 +253,7 @@ def predict_realtime(city: str):
         hazard_label=hazard_label,
         current_aqi=main_aqi,
         horizon_hours=3,
+        features=df,
     )
 
     _total_requests += 1
@@ -294,6 +302,94 @@ def metrics_lite():
         "failed_requests": _failed_requests,
         "by_city": dict(_requests_by_city),
     }
+
+
+def _build_prediction_response(df_row: pd.DataFrame, city_norm: str, input_type: str):
+    try:
+        aqi_3h = float(reg_pipeline.predict(df_row)[0])
+
+        hazard_proba = None
+        if hasattr(clf_pipeline, "predict_proba"):
+            proba = clf_pipeline.predict_proba(df_row)
+            if hasattr(proba, "shape") and proba.shape[1] > 1:
+                hazard_proba = float(proba[0][1])
+        hazard_prob = float(hazard_proba) if hazard_proba is not None else None
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    except Exception as exc:  # pragma: no cover - defensive
+        raise HTTPException(status_code=500, detail="Failed to run inference") from exc
+
+    hazard_label = "Hazardous" if aqi_3h >= 4.0 else "Safe / Moderate"
+    recs = build_recommendations(
+        aqi_3h=aqi_3h,
+        hazard_label=hazard_label,
+        current_aqi=df_row.get("main_aqi", [None])[0] if hasattr(df_row, "get") else None,
+        horizon_hours=3,
+        features=df_row,
+    )
+
+    meta_data = {
+        "model_version": "0.1.0",
+        "horizon_hours": 3,
+        "test_regression": {
+            "rmse": 0.46460589139258535,
+            "mae": 0.3053506111570628,
+            "r2": 0.8168652044889098,
+        },
+        "test_classification": {
+            "accuracy": 0.9042826946052752,
+            "f1": 0.9288082299463413,
+            "roc_auc": 0.9678310609190398,
+        },
+        "input_type": input_type,
+    }
+
+    return {
+        "city": city_norm.title() if city_norm else "",
+        "prediction": {
+            "aqi_3h": aqi_3h,
+            "hazard_prob": hazard_prob,
+            "hazard_label": hazard_label,
+        },
+        "realtime": {},
+        "meta": meta_data,
+        "recommendations": recs,
+    }
+
+
+@app.post("/predict_from_features", response_model=FeaturesPredictResponse)
+def predict_from_features(payload: FeaturesPredictRequest):
+    data = payload.features
+    missing = [c for c in FEATURE_COLUMNS if c not in data]
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Missing required feature columns: {missing}")
+
+    df = pd.DataFrame([data], columns=FEATURE_COLUMNS)
+    result = _build_prediction_response(df, data.get("city", ""), "features_json")
+    return {"result": result, "input_type": "features_json"}
+
+
+@app.post("/predict_from_csv", response_model=FeaturesBatchResponse)
+async def predict_from_csv(file: UploadFile = File(...)):
+    if not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Only CSV files are supported")
+    content = await file.read()
+    try:
+        df = pd.read_csv(pd.io.common.BytesIO(content))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Could not parse CSV: {exc}") from exc
+
+    missing = [c for c in FEATURE_COLUMNS if c not in df.columns]
+    if missing:
+        raise HTTPException(status_code=400, detail=f"Missing required feature columns: {missing}")
+
+    results = []
+    for _, row in df.iterrows():
+        row_df = pd.DataFrame([row], columns=FEATURE_COLUMNS)
+        res = _build_prediction_response(row_df, row.get("city", ""), "features_csv")
+        results.append(res)
+
+    return {"results": results, "input_type": "features_csv"}
 
 
 @app.get("/model_info")
