@@ -25,12 +25,14 @@ Historical AQI + Weather --> Prefect Flow (aqi_training_flow)
 - Model loader prefers production models, falls back to baseline artifacts.
 
 ## Environment & Requirements
-- Python 3.11
+- Python 3.11 (local, Docker, CI)
 - Install deps: `pip install -r requirements.txt`
 - Environment variables (see `.env.example`):
   - `OPENWEATHER_API_KEY` (required)
   - `API_BASE_URL` (for UI when needed)
+  - `NOTIFY_WEBHOOK_URL` (optional)
 - Copy `.env.example` → `.env` and fill in your key. Docker Compose reads `OPENWEATHER_API_KEY` from the shell environment.
+- If using Git LFS for models: `git lfs install` then `git lfs pull` to fetch production models.
 
 ## How to Run (Local, no Docker)
 ```bash
