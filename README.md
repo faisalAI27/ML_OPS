@@ -81,6 +81,18 @@ OPENWEATHER_API_KEY=your_key_here docker compose up --build
 - CI: `.github/workflows/ci.yml` runs pytest on push/PR.
 - Scheduled training: `.github/workflows/scheduled_training.yml` runs daily at 02:00 UTC (and via manual dispatch) to refresh `models/production/`.
 
+## CD publishes Docker images to GHCR
+- Trigger: after CI succeeds on `main`, a CD workflow builds and pushes Docker images to GitHub Container Registry.
+- API images: `ghcr.io/<owner>/smogguard-api:latest` and `ghcr.io/<owner>/smogguard-api:<commit-sha>`
+- UI images: `ghcr.io/<owner>/smogguard-ui:latest` and `ghcr.io/<owner>/smogguard-ui:<commit-sha>`
+- Pull locally:
+  - `docker pull ghcr.io/<owner>/smogguard-api:latest`
+  - `docker pull ghcr.io/<owner>/smogguard-ui:latest`
+- Run locally (supply runtime envs):
+  - `docker run --rm -p 8000:8000 -e OPENWEATHER_API_KEY=your_key ghcr.io/<owner>/smogguard-api:latest`
+  - `docker run --rm -p 8501:8501 -e API_BASE_URL=http://localhost:8000 ghcr.io/<owner>/smogguard-ui:latest`
+  - Note: UI needs `API_BASE_URL`; realtime API calls require `OPENWEATHER_API_KEY` at runtime.
+
 ## Monitoring & Logging
 - Structured logging via `app/logging_config.py` (stdout, consistent format).
 - Health/metrics: `/health`, `/metrics-lite` (counters reset on restart).
