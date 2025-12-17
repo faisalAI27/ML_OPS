@@ -3,6 +3,8 @@ FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
+RUN mkdir -p /app/models/production
+
 # Install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
