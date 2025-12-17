@@ -37,3 +37,12 @@ reports/metrics/*.json
 # allow CI drift sample
 !tests/data/
 !tests/data/current_sample.csv
+
+models/
+artifacts/
+data/
+*.pkl
+*.joblib
+*.pt
+*.onnx
+
