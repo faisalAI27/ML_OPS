@@ -20,8 +20,10 @@ reports/
 
 # These are commonly very large
 data/
+!data/raw/
+!data/raw/training/
+!data/raw/training/training_sample.csv
 models/
 artifacts/
 outputs/
 cache/
-
