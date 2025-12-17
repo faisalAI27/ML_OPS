@@ -9,6 +9,24 @@ services:
       - "8000:8000"
     environment:
       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys
+          import urllib.request
+
+          try:
+              resp = urllib.request.urlopen("http://localhost:8000/health", timeout=5)
+              sys.exit(0 if 200 <= resp.status < 400 else 1)
+          except Exception:
+              sys.exit(1)
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: on-failure
 
   ui:
@@ -18,7 +36,8 @@ services:
     ports:
       - "8501:8501"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     environment:
       - API_BASE_URL=http://api:8000
     restart: on-failure

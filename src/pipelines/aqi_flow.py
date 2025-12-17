@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
@@ -16,6 +17,12 @@ import joblib
 import pandas as pd
 from prefect import flow, task
 from sklearn.pipeline import Pipeline
+from sklearn.tree import DecisionTreeClassifier
+
+# Make sure the repo root is importable even if the flow is run outside the repo root.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.config import MODELS_DIR
 from src.models.train_model import (
@@ -33,7 +40,6 @@ from src.ml_tests.reference_builder import save_reference_stats, save_current_sa
 from src.ml_tests.drift_checks import REFERENCE_PATH
 from src.validation.data_checks import validate_features_targets, validate_raw_data
 from src.validation.model_checks import check_model_predictions
-from sklearn.tree import DecisionTreeClassifier
 
 METRICS_DIR = Path("reports/metrics")
 
