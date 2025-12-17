@@ -31,8 +31,12 @@ class DummyClassifier:
 
 @pytest.fixture(autouse=True)
 def patch_models(monkeypatch):
-    monkeypatch.setattr(main, "reg_pipeline", DummyRegressor())
-    monkeypatch.setattr(main, "clf_pipeline", DummyClassifier())
+    dummy_reg = DummyRegressor()
+    dummy_clf = DummyClassifier()
+
+    monkeypatch.setattr(main, "get_reg_pipeline", lambda: dummy_reg)
+    monkeypatch.setattr(main, "get_clf_pipeline", lambda: dummy_clf)
+    monkeypatch.setattr(main, "_ensure_models_loaded", lambda: (dummy_reg, dummy_clf))
     yield
 
 

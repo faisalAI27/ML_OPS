@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 from app.main import FEATURE_COLUMNS
-from app.inference import reg_pipeline, clf_pipeline
+from app.inference import MissingModelError, get_reg_pipeline, get_clf_pipeline
 from app.recommendations import build_recommendations
 
 
@@ -47,6 +47,13 @@ def sample_features_row() -> pd.DataFrame:
 
 
 def run_model_behavior_checks():
+    try:
+        reg_pipeline = get_reg_pipeline()
+        clf_pipeline = get_clf_pipeline()
+    except MissingModelError as exc:
+        print(f"Skipping model behavior checks: {exc}")
+        return
+
     df = sample_features_row()
     aqi_pred = reg_pipeline.predict(df)[0]
     assert 1.0 <= aqi_pred <= 5.0, "AQI prediction out of range"

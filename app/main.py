@@ -17,7 +17,7 @@ from app.logging_config import configure_logging
 from app.model_loader import MODELS_DIR, PROD_DIR
 from app.config import CITY_COORDS, OPENWEATHER_API_KEY
 from app.external_clients import fetch_openmeteo_weather, fetch_openweather_pollutants
-from app.inference import clf_pipeline, reg_pipeline
+from app.inference import MissingModelError, get_clf_pipeline, get_reg_pipeline
 from app.recommendations import build_recommendations
 from app.schemas import (
     AQIPredictionRequest,
@@ -90,6 +90,19 @@ def _using_real_external_clients() -> bool:
     return getattr(fetch_openweather_pollutants, "__module__", "") == "app.external_clients"
 
 
+def _ensure_models_loaded():
+    """Load models or raise a clear error instructing users to train them."""
+    try:
+        reg = get_reg_pipeline()
+        clf = get_clf_pipeline()
+        return reg, clf
+    except MissingModelError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=str(exc),
+        ) from exc
+
+
 @app.get("/health")
 def health():
     meta_path = PROD_DIR / "model_metadata.json"
@@ -101,9 +114,14 @@ def health():
                 model_version = meta.get("model_version") or meta.get("source_models", {}).get("model_version", "unknown")
         except Exception:
             model_version = "unknown"
+    try:
+        _ensure_models_loaded()
+        models_loaded = True
+    except HTTPException:
+        models_loaded = False
     return {
         "status": "ok",
-        "models_loaded": True,
+        "models_loaded": models_loaded,
         "model_version": model_version,
     }
 
@@ -131,6 +149,7 @@ def predict_aqi(payload: AQIPredictionRequest):
     data = payload.model_dump()
     df = pd.DataFrame([data], columns=FEATURE_COLUMNS)
 
+    reg_pipeline, clf_pipeline = _ensure_models_loaded()
     y_pred_reg = float(reg_pipeline.predict(df)[0])
     y_pred_clf = int(clf_pipeline.predict(df)[0])
 
@@ -174,8 +193,14 @@ def predict_realtime(city: str):
     )
 
     try:
+        reg_pipeline, clf_pipeline = _ensure_models_loaded()
         poll = fetch_openweather_pollutants(city_norm)
         weather = fetch_openmeteo_weather(city_norm)
+    except HTTPException as exc:  # raised by _ensure_models_loaded
+        _total_requests += 1
+        _failed_requests += 1
+        _requests_by_city[city_norm] += 1
+        raise exc
     except Exception as exc:  # pragma: no cover - passthrough to HTTP
         logger.exception("Failed to fetch real-time data for %s", city_norm)
         _total_requests += 1
@@ -235,6 +260,7 @@ def predict_realtime(city: str):
     df = pd.DataFrame([row], columns=FEATURE_COLUMNS)
 
     try:
+        reg_pipeline, clf_pipeline = _ensure_models_loaded()
         aqi_3h = float(reg_pipeline.predict(df)[0])
 
         hazard_proba = None
@@ -243,12 +269,11 @@ def predict_realtime(city: str):
             if hasattr(proba, "shape") and proba.shape[1] > 1:
                 hazard_proba = float(proba[0][1])
         hazard_prob = float(hazard_proba) if hazard_proba is not None else None
-    except FileNotFoundError as exc:
-        logger.exception("Model files missing during inference")
+    except HTTPException as exc:
         _total_requests += 1
         _failed_requests += 1
         _requests_by_city[city_norm] += 1
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise exc
     except Exception as exc:  # pragma: no cover - defensive
         logger.exception("Failed to run inference for %s", city_norm)
         _total_requests += 1
@@ -316,6 +341,7 @@ def metrics_lite():
 
 def _build_prediction_response(df_row: pd.DataFrame, city_norm: str, input_type: str):
     try:
+        reg_pipeline, clf_pipeline = _ensure_models_loaded()
         aqi_3h = float(reg_pipeline.predict(df_row)[0])
 
         hazard_proba = None
@@ -324,6 +350,8 @@ def _build_prediction_response(df_row: pd.DataFrame, city_norm: str, input_type:
             if hasattr(proba, "shape") and proba.shape[1] > 1:
                 hazard_proba = float(proba[0][1])
         hazard_prob = float(hazard_proba) if hazard_proba is not None else None
+    except HTTPException:
+        raise
     except FileNotFoundError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover - defensive

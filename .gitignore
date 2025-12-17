@@ -13,9 +13,10 @@ data/raw/
 data/processed/
 
 # models & artifacts
-models/
-models/production/
-models/production/*.pkl
+models/**
+models/**/*.pkl
+models/**/*.joblib
+models/**/*.bin
 artifacts/
 *.pkl
 *.joblib
@@ -23,7 +24,12 @@ artifacts/
 *.pth
 *.h5
 *.onnx
+reports/metrics/*.json
 # allow checked-in packages/artifacts
+!models/
+!models/README.md
+!models/production/
+!models/production/.gitkeep
 !src/models/
 !src/models/**.py
 # allow CI drift sample

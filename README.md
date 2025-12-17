@@ -81,6 +81,12 @@ OPENWEATHER_API_KEY=your_key_here docker compose up --build
 - CI: `.github/workflows/ci.yml` runs pytest on push/PR.
 - Scheduled training: `.github/workflows/scheduled_training.yml` runs daily at 02:00 UTC (and via manual dispatch) to refresh `models/production/`.
 
+## Models are generated (not stored in git)
+- Models (`.pkl/.joblib/.bin`) are ignored from git/LFS. Run `python -m src.pipelines.aqi_flow` to produce `models/` and `models/production/`.
+- API/CLI will raise a clear error if models are missing; train first before serving.
+- Local: after training, run `uvicorn app.main:app --reload`.
+- Docker: images build without models; mount or bake in generated artifacts if needed, or train inside the container before serving.
+
 ## CD publishes Docker images to GHCR
 - Trigger: after CI succeeds on `main`, a CD workflow builds and pushes Docker images to GitHub Container Registry.
 - API images: `ghcr.io/<owner>/smogguard-api:latest` and `ghcr.io/<owner>/smogguard-api:<commit-sha>`
