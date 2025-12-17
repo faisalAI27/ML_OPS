@@ -10,9 +10,10 @@ import json
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 import joblib
+import pandas as pd
 from prefect import flow, task
 from sklearn.pipeline import Pipeline
 
@@ -30,7 +31,6 @@ from src.models.train_model import (
 from src.notifications import send_webhook
 from src.ml_tests.reference_builder import save_reference_stats, save_current_sample
 from src.ml_tests.drift_checks import REFERENCE_PATH
-from pathlib import Path
 from src.validation.data_checks import validate_features_targets, validate_raw_data
 from src.validation.model_checks import check_model_predictions
 from sklearn.tree import DecisionTreeClassifier

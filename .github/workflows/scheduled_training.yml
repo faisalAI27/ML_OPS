@@ -26,6 +26,11 @@ jobs:
       - name: Set PYTHONPATH
         run: echo "PYTHONPATH=$GITHUB_WORKSPACE" >> $GITHUB_ENV
 
+      - name: Debug import paths
+        run: |
+          python -c "import sys; print(sys.path)"
+          python -c "import src; import src.models; print('imports ok')"
+
       - name: Run Prefect training flow
         run: |
           python -m src.pipelines.aqi_flow

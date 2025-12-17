@@ -23,6 +23,9 @@ artifacts/
 *.pth
 *.h5
 *.onnx
+# allow checked-in packages/artifacts
+!src/models/
+!src/models/**.py
 # allow CI drift sample
 !tests/data/
 !tests/data/current_sample.csv
