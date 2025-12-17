@@ -1,3 +1,9 @@
+---
+title: SmogGuard PK
+sdk: docker
+app_port: 7860
+---
+
 # SmogGuard PK – AQI Forecasting for 5 Pakistani Cities
 
 Predicts 3-hour-ahead air quality (AQI 1–5 scale) and hazard status (AQI ≥ 4 → hazardous) for Islamabad, Lahore, Karachi, Peshawar, and Quetta. Includes data prep, training pipeline, model registry (files), FastAPI backend, Streamlit UI, CI/CD, and Docker.
