@@ -7,3 +7,22 @@ __pycache__
 .pytest_cache
 .DS_Store
 # Keep models/data in the build context for tests and runtime
+.git
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+venv/
+
+# Big folders (usually huge)
+notebooks/
+reports/
+tests/
+
+# These are commonly very large
+data/
+models/
+artifacts/
+outputs/
+cache/
+

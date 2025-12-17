@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   api:
     build:
@@ -9,6 +7,8 @@ services:
       - "8000:8000"
     environment:
       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
+    volumes:
+      - ./models_runtime:/app/models
     healthcheck:
       test:
         - CMD
