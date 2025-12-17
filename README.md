@@ -80,6 +80,7 @@ OPENWEATHER_API_KEY=your_key_here docker compose up --build
 - Manual: `python -m src.pipelines.aqi_flow`
 - CI: `.github/workflows/ci.yml` runs pytest on push/PR.
 - Scheduled training: `.github/workflows/scheduled_training.yml` runs daily at 02:00 UTC (and via manual dispatch) to refresh `models/production/`.
+- Training data: the full parquet `data/raw/training/training_all_cities_until_2024_06_30.parquet` stays local; GitHub uses the tracked fallback sample `data/raw/training/training_sample.csv`. Regenerate the sample from the full parquet with `python scripts/make_training_sample.py --rows 5000`.
 
 ## Models are generated (not stored in git)
 - Models (`.pkl/.joblib/.bin`) are ignored from git/LFS. Run `python -m src.pipelines.aqi_flow` to produce `models/` and `models/production/`.

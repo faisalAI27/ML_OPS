@@ -28,16 +28,27 @@ from src.features.build_features import build_features
 from src.features.targets import add_future_targets
 
 TRAINING_FILE = RAW_TRAINING_DIR / "training_all_cities_until_2024_06_30.parquet"
+TRAINING_SAMPLE_FILE = RAW_TRAINING_DIR / "training_sample.csv"
 HORIZON_HOURS = 3
 CUTOFF_TS = pd.Timestamp("2023-12-31 23:59:59")
 
 
 def load_and_prepare_data(training_path: Path = TRAINING_FILE, horizon_hours: int = HORIZON_HOURS) -> pd.DataFrame:
-    """Load raw training data, add targets, and build features."""
-    if not training_path.exists():
-        raise FileNotFoundError(f"Training data not found at {training_path}")
+    """Load raw training data, add targets, and build features.
 
-    df = pd.read_parquet(training_path)
+    Falls back to a lightweight CSV sample if the full parquet is unavailable.
+    """
+    path_to_use = training_path if training_path.exists() else TRAINING_SAMPLE_FILE
+    if not path_to_use.exists():
+        raise FileNotFoundError(
+            f"Training data not found. Expected {training_path} or fallback sample at {TRAINING_SAMPLE_FILE}."
+        )
+
+    if path_to_use.suffix == ".parquet":
+        df = pd.read_parquet(path_to_use)
+    else:
+        df = pd.read_csv(path_to_use)
+
     df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce").dt.tz_localize(None)
     df = df.dropna(subset=["datetime"])
     df["city"] = df["city"].astype(str)

@@ -7,9 +7,11 @@ __pycache__/
 .pytest_cache/
 
 # data
-data/
+data/**
 !data/reference_stats.json
-data/raw/
+!data/raw/
+!data/raw/training/
+!data/raw/training/training_sample.csv
 data/processed/
 
 # models & artifacts
