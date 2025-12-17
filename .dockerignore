@@ -17,7 +17,6 @@ venv/
 # Big folders (usually huge)
 notebooks/
 reports/
-tests/
 
 # These are commonly very large
 data/
