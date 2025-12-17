@@ -31,6 +31,16 @@ jobs:
           pytest
           python -m src.ml_tests.run_all
 
+      - name: Upload experiment logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: experiment-logs
+          path: |
+            reports/experiments_log.csv
+            reports/experiments_latest.json
+          if-no-files-found: ignore
+
   docker-tests:
     runs-on: ubuntu-latest
 
@@ -48,3 +58,30 @@ jobs:
 
       - name: Run tests in API container
         run: docker run --rm smogguard-api:ci pytest -q
+
+  notify:
+    runs-on: ubuntu-latest
+    needs:
+      - test
+      - docker-tests
+    if: ${{ always() }}
+    steps:
+      - name: Notify Discord (success)
+        if: ${{ needs.test.result == 'success' && needs.docker-tests.result == 'success' }}
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+            payload='{"content":"✅ CI passed for smogguard_pk on '"${GITHUB_REF}"' ('"${GITHUB_SHA}"')"}'
+            curl -X POST -H 'Content-Type: application/json' -d "$payload" "$DISCORD_WEBHOOK_URL" || true
+          fi
+
+      - name: Notify Discord (failure)
+        if: ${{ needs.test.result != 'success' || needs.docker-tests.result != 'success' }}
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          if [ -n "$DISCORD_WEBHOOK_URL" ]; then
+            payload='{"content":"❌ CI failed for smogguard_pk on '"${GITHUB_REF}"' ('"${GITHUB_SHA}"'). Check GitHub Actions logs."}'
+            curl -X POST -H 'Content-Type: application/json' -d "$payload" "$DISCORD_WEBHOOK_URL" || true
+          fi

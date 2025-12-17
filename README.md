@@ -81,6 +81,8 @@ OPENWEATHER_API_KEY=your_key_here docker compose up --build
 - CI: `.github/workflows/ci.yml` runs pytest on push/PR.
 - Scheduled training: `.github/workflows/scheduled_training.yml` runs daily at 02:00 UTC (and via manual dispatch) to refresh `models/production/`.
 - Training data: the full parquet `data/raw/training/training_all_cities_until_2024_06_30.parquet` stays local; GitHub uses the tracked fallback sample `data/raw/training/training_sample.csv`. Regenerate the sample from the full parquet with `python scripts/make_training_sample.py --rows 5000`.
+- Experiments: each Prefect training run appends metrics to `reports/experiments_log.csv` and writes the latest snapshot to `reports/experiments_latest.json`; a brief narrative lives in `reports/experiment_summary.md`.
+- DeepChecks locally: set `PYTHONPATH=.` when running the DeepChecks suite directly, e.g. `PYTHONPATH=. pytest -q tests/test_deepchecks_suite.py`, to avoid import errors.
 
 ## Models are generated (not stored in git)
 - Models (`.pkl/.joblib/.bin`) are ignored from git/LFS. Run `python -m src.pipelines.aqi_flow` to produce `models/` and `models/production/`.

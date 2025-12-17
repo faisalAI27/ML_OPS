@@ -36,10 +36,13 @@ from src.models.train_model import (
     prepare_train_val_split,
 )
 from src.notifications import send_webhook
+from src.notifications.discord import notify_discord
+from src.data.ingestion import ingest_local_training_data
 from src.ml_tests.reference_builder import save_reference_stats, save_current_sample
 from src.ml_tests.drift_checks import REFERENCE_PATH
 from src.validation.data_checks import validate_features_targets, validate_raw_data
 from src.validation.model_checks import check_model_predictions
+from src.experiments.experiment_logger import log_experiment
 
 METRICS_DIR = Path("reports/metrics")
 
@@ -66,8 +69,16 @@ def _get_run_id_safe() -> str | None:
 
 
 @task(retries=3, retry_delay_seconds=30, timeout_seconds=600)
-def load_raw_data():
+def ingest_raw_data():
+    """Copy latest available training data into the ingested folder and return the path."""
+    return ingest_local_training_data()
+
+
+@task(retries=3, retry_delay_seconds=30, timeout_seconds=600)
+def load_raw_data(training_path=None):
     """Load the cleaned historical dataset using the baseline loader."""
+    if training_path:
+        return load_and_prepare_data(training_path=Path(training_path), horizon_hours=HORIZON_HOURS)
     return load_and_prepare_data(horizon_hours=HORIZON_HOURS)
 
 
@@ -220,6 +231,7 @@ def register_production_model(models_info: Dict[str, Any], metrics: Dict[str, An
         "classifier": str(clf_prod),
         "recommender": str(rec_prod),
         "metadata": str(prod_dir / "model_metadata.json"),
+        "training_run_id": meta["training_run_id"],
     }
 
 
@@ -227,7 +239,8 @@ def register_production_model(models_info: Dict[str, Any], metrics: Dict[str, An
 def aqi_training_flow():
     """Prefect flow orchestrating AQI training/evaluation."""
     try:
-        df = load_raw_data()
+        ingested_path = ingest_raw_data()
+        df = load_raw_data(ingested_path)
         validate_raw_task(df)
         X_train, y_reg_train, y_clf_train, X_val, y_reg_val, y_clf_val, feature_cols = build_features_targets(df)
         validate_features_task(X_train, y_reg_train, y_clf_train)
@@ -248,8 +261,22 @@ def aqi_training_flow():
         print("\n=== AQI Training Flow Summary ===")
         print(summary)
         send_webhook(f"Training succeeded. {summary}", status="success")
+        notify_discord(f"✅ AQI training flow succeeded. {summary}")
+        try:
+            log_experiment(
+                run_id=prod_info.get("training_run_id", "unknown"),
+                reg_metrics=metrics.get("regression", {}),
+                clf_metrics=metrics.get("classification", {}),
+                recommender_metrics=metrics.get("recommender", {}),
+                model_paths=prod_info,
+                notes="automated Prefect training flow",
+            )
+        except Exception:
+            # Tracking is best-effort; never block success path
+            pass
     except Exception as exc:
         send_webhook(f"Training failed: {exc}", status="error")
+        notify_discord(f"❌ AQI training flow failed: {exc}")
         raise
 
 
